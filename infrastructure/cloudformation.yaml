@@ -1,0 +1,370 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Employee Ideas Management System - DynamoDB tables and Lambda functions'
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues:
+      - dev
+      - staging
+      - prod
+    Description: Environment name
+
+Resources:
+  # DynamoDB Tables
+  
+  UsersTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub '${Environment}-Users'
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: userId
+          AttributeType: S
+        - AttributeName: username
+          AttributeType: S
+        - AttributeName: role
+          AttributeType: S
+      KeySchema:
+        - AttributeName: userId
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: username-index
+          KeySchema:
+            - AttributeName: username
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+        - IndexName: role-index
+          KeySchema:
+            - AttributeName: role
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Application
+          Value: EmployeeIdeasManagement
+
+  IdeasTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub '${Environment}-Ideas'
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: ideaId
+          AttributeType: S
+        - AttributeName: submitterId
+          AttributeType: S
+        - AttributeName: assigneeId
+          AttributeType: S
+        - AttributeName: status
+          AttributeType: S
+      KeySchema:
+        - AttributeName: ideaId
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: submitter-index
+          KeySchema:
+            - AttributeName: submitterId
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+        - IndexName: assignee-index
+          KeySchema:
+            - AttributeName: assigneeId
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+        - IndexName: status-index
+          KeySchema:
+            - AttributeName: status
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Application
+          Value: EmployeeIdeasManagement
+
+  # IAM Roles for Lambda Functions
+  
+  UserServiceExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub '${Environment}-UserServiceExecutionRole'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: DynamoDBAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:GetItem
+                  - dynamodb:PutItem
+                  - dynamodb:UpdateItem
+                  - dynamodb:DeleteItem
+                  - dynamodb:Query
+                  - dynamodb:Scan
+                Resource:
+                  - !GetAtt UsersTable.Arn
+                  - !Sub '${UsersTable.Arn}/index/*'
+
+  IdeasServiceExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub '${Environment}-IdeasServiceExecutionRole'
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: DynamoDBAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:GetItem
+                  - dynamodb:PutItem
+                  - dynamodb:UpdateItem
+                  - dynamodb:DeleteItem
+                  - dynamodb:Query
+                  - dynamodb:Scan
+                Resource:
+                  - !GetAtt IdeasTable.Arn
+                  - !Sub '${IdeasTable.Arn}/index/*'
+                  - !GetAtt UsersTable.Arn
+                  - !Sub '${UsersTable.Arn}/index/*'
+
+  # Lambda Functions
+  
+  UserServiceFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub '${Environment}-UserService'
+      Runtime: nodejs20.x
+      Handler: index.handler
+      Role: !GetAtt UserServiceExecutionRole.Arn
+      Code:
+        ZipFile: |
+          exports.handler = async (event) => {
+            return {
+              statusCode: 200,
+              body: JSON.stringify({ message: 'User Service - Placeholder' })
+            };
+          };
+      Environment:
+        Variables:
+          USERS_TABLE_NAME: !Ref UsersTable
+          ENVIRONMENT: !Ref Environment
+      Timeout: 30
+      MemorySize: 512
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Application
+          Value: EmployeeIdeasManagement
+
+  IdeasServiceFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub '${Environment}-IdeasService'
+      Runtime: nodejs20.x
+      Handler: index.handler
+      Role: !GetAtt IdeasServiceExecutionRole.Arn
+      Code:
+        ZipFile: |
+          exports.handler = async (event) => {
+            return {
+              statusCode: 200,
+              body: JSON.stringify({ message: 'Ideas Service - Placeholder' })
+            };
+          };
+      Environment:
+        Variables:
+          IDEAS_TABLE_NAME: !Ref IdeasTable
+          USERS_TABLE_NAME: !Ref UsersTable
+          ENVIRONMENT: !Ref Environment
+      Timeout: 30
+      MemorySize: 512
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Application
+          Value: EmployeeIdeasManagement
+
+  # API Gateway (Optional - for HTTP access to Lambda functions)
+  
+  ApiGateway:
+    Type: AWS::ApiGatewayV2::Api
+    Properties:
+      Name: !Sub '${Environment}-EmployeeIdeasAPI'
+      ProtocolType: HTTP
+      CorsConfiguration:
+        AllowOrigins:
+          - '*'
+        AllowMethods:
+          - GET
+          - POST
+          - PUT
+          - DELETE
+          - OPTIONS
+        AllowHeaders:
+          - '*'
+
+  UserServiceIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref ApiGateway
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !GetAtt UserServiceFunction.Arn
+      PayloadFormatVersion: '2.0'
+
+  IdeasServiceIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref ApiGateway
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !GetAtt IdeasServiceFunction.Arn
+      PayloadFormatVersion: '2.0'
+
+  UserServiceRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref ApiGateway
+      RouteKey: 'ANY /users/{proxy+}'
+      Target: !Sub 'integrations/${UserServiceIntegration}'
+
+  UserServiceAuthRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref ApiGateway
+      RouteKey: 'POST /auth/login'
+      Target: !Sub 'integrations/${UserServiceIntegration}'
+
+  IdeasServiceRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref ApiGateway
+      RouteKey: 'ANY /ideas/{proxy+}'
+      Target: !Sub 'integrations/${IdeasServiceIntegration}'
+
+  ApiGatewayStage:
+    Type: AWS::ApiGatewayV2::Stage
+    Properties:
+      ApiId: !Ref ApiGateway
+      StageName: !Ref Environment
+      AutoDeploy: true
+
+  UserServiceInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref UserServiceFunction
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGateway}/*'
+
+  IdeasServiceInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref IdeasServiceFunction
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub 'arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGateway}/*'
+
+  # S3 Bucket for Frontend
+  
+  FrontendBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub '${Environment}-employee-ideas-frontend-${AWS::AccountId}'
+      WebsiteConfiguration:
+        IndexDocument: index.html
+        ErrorDocument: index.html
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: false
+        BlockPublicPolicy: false
+        IgnorePublicAcls: false
+        RestrictPublicBuckets: false
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Application
+          Value: EmployeeIdeasManagement
+
+  FrontendBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref FrontendBucket
+      PolicyDocument:
+        Statement:
+          - Sid: PublicReadGetObject
+            Effect: Allow
+            Principal: '*'
+            Action: 's3:GetObject'
+            Resource: !Sub '${FrontendBucket.Arn}/*'
+
+Outputs:
+  UsersTableName:
+    Description: Name of the Users DynamoDB table
+    Value: !Ref UsersTable
+    Export:
+      Name: !Sub '${Environment}-UsersTableName'
+
+  IdeasTableName:
+    Description: Name of the Ideas DynamoDB table
+    Value: !Ref IdeasTable
+    Export:
+      Name: !Sub '${Environment}-IdeasTableName'
+
+  UserServiceFunctionName:
+    Description: Name of the User Service Lambda function
+    Value: !Ref UserServiceFunction
+
+  IdeasServiceFunctionName:
+    Description: Name of the Ideas Service Lambda function
+    Value: !Ref IdeasServiceFunction
+
+  UserServiceFunctionArn:
+    Description: ARN of the User Service Lambda function
+    Value: !GetAtt UserServiceFunction.Arn
+    Export:
+      Name: !Sub '${Environment}-UserServiceFunctionArn'
+
+  IdeasServiceFunctionArn:
+    Description: ARN of the Ideas Service Lambda function
+    Value: !GetAtt IdeasServiceFunction.Arn
+    Export:
+      Name: !Sub '${Environment}-IdeasServiceFunctionArn'
+
+  ApiGatewayUrl:
+    Description: API Gateway endpoint URL
+    Value: !Sub 'https://${ApiGateway}.execute-api.${AWS::Region}.amazonaws.com/${Environment}'
+    Export:
+      Name: !Sub '${Environment}-ApiEndpoint'
+
+  FrontendBucketName:
+    Description: Name of the S3 bucket for frontend hosting
+    Value: !Ref FrontendBucket
+
+  WebsiteURL:
+    Description: URL for the frontend website
+    Value: !GetAtt FrontendBucket.WebsiteURL

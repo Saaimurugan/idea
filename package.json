@@ -1,0 +1,20 @@
+{
+  "name": "employee-ideas-management",
+  "version": "1.0.0",
+  "description": "Employee Ideas Management System - Serverless application with Lambda functions and React frontend",
+  "private": true,
+  "workspaces": [
+    "backend/user-service",
+    "backend/ideas-service",
+    "frontend"
+  ],
+  "scripts": {
+    "install:all": "npm install && npm install --workspaces",
+    "test": "npm run test --workspaces",
+    "build": "npm run build --workspaces",
+    "deploy": "aws cloudformation deploy --template-file infrastructure/cloudformation.yaml --stack-name employee-ideas-management --capabilities CAPABILITY_IAM"
+  },
+  "keywords": ["serverless", "lambda", "dynamodb", "react"],
+  "author": "",
+  "license": "MIT"
+}

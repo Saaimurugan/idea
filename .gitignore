@@ -1,0 +1,58 @@
+# Dependencies
+node_modules/
+package-lock.json
+
+# Build outputs
+dist/
+build/
+*.js.map
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Testing
+coverage/
+.nyc_output/
+
+# AWS
+.aws-sam/
+
+# TypeScript
+*.tsbuildinfo
+
+# AWS Credentials (CRITICAL - NEVER COMMIT)
+.aws/
+*.pem
+*.key
+credentials
+config
+aws-credentials.txt
+
+# Deployment artifacts
+backend/user-service/user-service.zip
+backend/ideas-service/ideas-service.zip
+backend/user-service/dist/
+backend/ideas-service/dist/
+*.zip
+
+# Production environment files
+.env.production
+frontend/.env.production

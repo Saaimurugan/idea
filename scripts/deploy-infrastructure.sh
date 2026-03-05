@@ -33,11 +33,11 @@ echo "Deploying CloudFormation stack..."
 aws cloudformation deploy \
   --template-file $TEMPLATE_FILE \
   --stack-name $STACK_NAME \
-  --capabilities CAPABILITY_IAM \
+  --capabilities CAPABILITY_NAMED_IAM \
   --profile $PROFILE \
   --region $REGION \
   --parameter-overrides \
-    Environment=production
+    Environment=prod
 
 echo ""
 echo "✓ Stack deployment initiated"

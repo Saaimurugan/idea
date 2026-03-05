@@ -1,210 +1,140 @@
 # Deployment Checklist
 
-Use this checklist to ensure a smooth deployment.
+## Current Status
+✅ Infrastructure deployed (DynamoDB, Lambda, API Gateway, S3)
+✅ Frontend deployed to S3
+❌ Backend Lambda functions need actual code deployment
+❌ Admin user needs to be created
 
-## ⚠️ CRITICAL: Before You Start
+## Steps to Fix Login Issue
 
-- [ ] **ROTATE YOUR AWS CREDENTIALS IMMEDIATELY**
-  - The credentials you shared earlier are now compromised
-  - Go to AWS IAM Console → Users → Security Credentials
-  - Delete or deactivate the exposed access key
-  - Create new credentials
+### Step 1: Deploy Backend Lambda Functions
 
-## Prerequisites
+The Lambda functions currently have placeholder code. Deploy the actual application code:
 
-- [ ] AWS Account created
-- [ ] AWS CLI installed ([Download](https://aws.amazon.com/cli/))
-- [ ] Node.js 18+ installed ([Download](https://nodejs.org/))
-- [ ] Git Bash (Windows) or Terminal (Mac/Linux)
-- [ ] Project files downloaded/cloned
+```bash
+scripts\deploy-backend.bat
+```
 
-## Step 1: Secure Credential Setup
+This will:
+- Build both User Service and Ideas Service
+- Package them with dependencies
+- Upload to Lambda functions
+- Update the function code
 
-- [ ] Open Git Bash (Windows) or Terminal (Mac/Linux)
-- [ ] Navigate to project directory: `cd /path/to/project`
-- [ ] Run: `./scripts/setup-aws-profile.sh` (or `scripts\setup-aws-profile.bat` on Windows CMD)
-- [ ] Enter your **NEW** AWS Access Key ID
-- [ ] Enter your **NEW** AWS Secret Access Key
-- [ ] Enter region: `us-east-2`
-- [ ] Enter output format: `json`
-- [ ] Verify: `aws sts get-caller-identity --profile employee-ideas`
+**Expected time:** 3-5 minutes
 
-## Step 2: Deploy Infrastructure
+### Step 2: Verify API Gateway is Working
 
-- [ ] Run: `./scripts/deploy-all.sh`
-- [ ] Wait for deployment to complete (~3 minutes)
-- [ ] Note the Website URL from output
-- [ ] Note the API Gateway URL from output
+After backend deployment, test the API endpoint:
 
-## Step 3: Create Admin User
+```bash
+# Get your API Gateway URL
+scripts\get-deployment-info.bat
+```
 
-- [ ] Run: `./scripts/create-admin-user.sh`
-- [ ] Enter admin username (e.g., `admin`)
-- [ ] Enter admin password (e.g., `Admin123!`)
-- [ ] Enter admin email (e.g., `admin@example.com`)
-- [ ] Verify user created successfully
+Look for the `ApiGatewayUrl` output (should be something like `https://xxxxx.execute-api.us-east-2.amazonaws.com/prod`)
 
-## Step 4: Verify Deployment
+Test the endpoint:
+```bash
+curl https://YOUR-API-URL/users
+```
 
-- [ ] Open Website URL in browser
-- [ ] Verify login page loads
-- [ ] Log in with admin credentials
-- [ ] Verify admin dashboard loads
-- [ ] Check User Management page
-- [ ] Check All Ideas page
+You should get a response (even if it's an error about authentication, that means the API is working).
 
-## Step 5: Test Functionality
+### Step 3: Create Admin User
 
-### User Management
-- [ ] Create an Employee user
-- [ ] Create a Reviewer user
-- [ ] Create an Implementer user
-- [ ] Log out
+Once the backend is deployed, create an admin user:
 
-### Employee Workflow
-- [ ] Log in as Employee
-- [ ] Submit a new idea
-- [ ] Verify idea appears in "My Ideas"
-- [ ] Log out
+```bash
+scripts\create-admin-user.bat
+```
 
-### Reviewer Workflow
-- [ ] Log in as Reviewer
-- [ ] Verify idea appears in "Review Ideas"
-- [ ] Assign idea to Implementer
-- [ ] Log out
+This will prompt you for:
+- Username (e.g., "admin")
+- Email (e.g., "admin@company.com")
+- Password (choose a secure password)
 
-### Implementer Workflow
-- [ ] Log in as Implementer
-- [ ] Verify idea appears in "My Assigned Ideas"
-- [ ] Update idea status to "In Progress"
-- [ ] Add a comment
-- [ ] Log out
+### Step 4: Test Login
 
-### Admin Workflow
-- [ ] Log in as Admin
-- [ ] Verify all ideas visible in "All Ideas"
-- [ ] Verify all users visible in "User Management"
-
-## Step 6: Monitor and Verify
-
-- [ ] Check CloudWatch logs for errors:
-  ```bash
-  aws logs tail /aws/lambda/production-UserService --follow --profile employee-ideas --region us-east-2
-  ```
-- [ ] Verify DynamoDB tables created:
-  ```bash
-  aws dynamodb list-tables --profile employee-ideas --region us-east-2
-  ```
-- [ ] Verify Lambda functions deployed:
-  ```bash
-  aws lambda list-functions --profile employee-ideas --region us-east-2
-  ```
-- [ ] Test API Gateway endpoint:
-  ```bash
-  curl {API_GATEWAY_URL}/health
-  ```
+1. Go to your website URL (from `get-deployment-info.bat`)
+2. Use the admin credentials you just created
+3. You should be able to log in successfully
 
 ## Troubleshooting
 
-### If deployment fails:
+### If login still fails:
 
-- [ ] Check AWS credentials are correct
-- [ ] Verify AWS CLI is installed: `aws --version`
-- [ ] Check CloudFormation stack events:
-  ```bash
-  aws cloudformation describe-stack-events --stack-name employee-ideas-stack --profile employee-ideas --region us-east-2
-  ```
-- [ ] Review error messages in terminal output
+1. **Check browser console** (F12 → Console tab)
+   - Look for network errors
+   - Check if API URL is correct
 
-### If login doesn't work:
+2. **Check Network tab** (F12 → Network tab)
+   - Look at the request to `/auth/login`
+   - Check the request URL - it should point to your API Gateway
+   - Check the response - what error is returned?
 
-- [ ] Verify admin user was created in DynamoDB
-- [ ] Check CloudWatch logs for Lambda errors
-- [ ] Verify API Gateway URL is correct in frontend
-- [ ] Check browser console for errors
+3. **Verify API Gateway URL in frontend**
+   - The frontend should be built with `VITE_API_BASE_URL` pointing to your API Gateway
+   - Check `frontend/.env.production` file
 
-### If CORS errors occur:
+4. **Check Lambda logs**
+   ```bash
+   # View User Service logs
+   aws logs tail /aws/lambda/prod-UserService --follow --profile employee-ideas --region us-east-2
+   ```
 
-- [ ] Verify API Gateway CORS configuration
-- [ ] Check that API Gateway URL matches frontend configuration
-- [ ] Clear browser cache and try again
+5. **Verify DynamoDB tables exist**
+   ```bash
+   aws dynamodb list-tables --profile employee-ideas --region us-east-2
+   ```
+   Should show: `prod-Users` and `prod-Ideas`
 
-## Cleanup (When Done Testing)
+### Common Issues:
 
-- [ ] Run: `./scripts/cleanup.sh`
-- [ ] Confirm deletion when prompted
-- [ ] Verify all resources deleted in AWS Console
+**Issue:** "Network error" in browser
+- **Cause:** CORS not configured or API Gateway URL wrong
+- **Fix:** Verify API Gateway has CORS enabled (it should from CloudFormation)
 
-## Security Checklist
+**Issue:** "User not found" error
+- **Cause:** Admin user not created yet
+- **Fix:** Run `scripts\create-admin-user.bat`
 
-- [ ] AWS credentials stored in `~/.aws/credentials` (not in code)
-- [ ] `.aws/` directory is in `.gitignore`
-- [ ] No credentials committed to git
-- [ ] Old/exposed credentials rotated
-- [ ] CloudWatch logging enabled
-- [ ] IAM roles use least privilege
+**Issue:** "Internal server error"
+- **Cause:** Lambda function error
+- **Fix:** Check CloudWatch logs for the Lambda function
 
-## Production Readiness (Optional)
-
-If deploying to production:
-
-- [ ] Enable CloudFront for HTTPS
-- [ ] Configure custom domain
-- [ ] Enable DynamoDB backups
-- [ ] Set up CloudWatch alarms
-- [ ] Implement rate limiting
-- [ ] Use AWS Secrets Manager
-- [ ] Enable AWS WAF
-- [ ] Implement proper password hashing (bcrypt)
-- [ ] Add API authentication
-- [ ] Set up CI/CD pipeline
-- [ ] Perform security audit
-- [ ] Load testing
-- [ ] Disaster recovery plan
-
-## Documentation Review
-
-- [ ] Read [QUICKSTART.md](QUICKSTART.md)
-- [ ] Review [DEPLOYMENT.md](DEPLOYMENT.md)
-- [ ] Check [README.md](README.md)
-- [ ] Review [DEPLOYMENT-SUMMARY.md](DEPLOYMENT-SUMMARY.md)
-
-## Support Resources
-
-- **CloudWatch Logs**: Check for Lambda errors
-- **CloudFormation Events**: Check for deployment issues
-- **AWS Console**: Verify resources created
-- **Documentation**: See DEPLOYMENT.md for detailed troubleshooting
-
-## ✅ Deployment Complete!
-
-Once all items are checked, your Employee Ideas Management System is successfully deployed and ready to use!
-
-**Website URL**: ___________________________________
-
-**API Gateway URL**: ___________________________________
-
-**Admin Username**: ___________________________________
-
-**Admin Password**: ___________________________________ (store securely!)
-
----
+**Issue:** Frontend shows old cached version
+- **Cause:** Browser cache
+- **Fix:** Hard refresh (Ctrl+Shift+R) or clear browser cache
 
 ## Quick Reference Commands
 
 ```bash
-# Get deployment info
-./scripts/get-deployment-info.sh
+# Get all deployment info
+scripts\get-deployment-info.bat
 
-# View logs
-aws logs tail /aws/lambda/production-UserService --follow --profile employee-ideas --region us-east-2
+# Redeploy backend only
+scripts\deploy-backend.bat
 
-# Redeploy frontend
-./scripts/deploy-frontend.sh
+# Redeploy frontend only
+scripts\deploy-frontend.bat
 
-# Redeploy backend
-./scripts/deploy-backend.sh
+# Create admin user
+scripts\create-admin-user.bat
 
-# Delete everything
-./scripts/cleanup.sh
+# View Lambda logs
+aws logs tail /aws/lambda/prod-UserService --follow --profile employee-ideas --region us-east-2
+aws logs tail /aws/lambda/prod-IdeasService --follow --profile employee-ideas --region us-east-2
+
+# Test API endpoint
+curl https://YOUR-API-URL/users
 ```
+
+## Next Steps After Login Works
+
+1. Create additional users (Reviewers, Implementers, Employees)
+2. Test idea submission
+3. Test idea review workflow
+4. Test idea assignment
+5. Test comments functionality

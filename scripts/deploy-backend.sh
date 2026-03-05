@@ -37,13 +37,25 @@ echo ""
 # Build and deploy User Service
 echo "Building User Service..."
 cd backend/user-service
-npm install --production
+npm install
 npm run build
 
 echo "Creating deployment package for User Service..."
+rm -rf dist
 mkdir -p dist
-cp -r node_modules dist/
+
+# Install production dependencies in dist folder
+echo "Installing production dependencies..."
+cp package.json dist/
+cp package-lock.json dist/ 2>/dev/null || true
+cd dist
+npm install --production --no-package-lock
+cd ..
+
+# Copy built files
 cp -r build/* dist/
+
+# Create zip file
 cd dist
 zip -r ../user-service.zip . > /dev/null
 cd ..
@@ -60,14 +72,26 @@ echo ""
 
 # Build and deploy Ideas Service
 echo "Building Ideas Service..."
-cd ../../backend/ideas-service
-npm install --production
+cd ../ideas-service
+npm install
 npm run build
 
 echo "Creating deployment package for Ideas Service..."
+rm -rf dist
 mkdir -p dist
-cp -r node_modules dist/
+
+# Install production dependencies in dist folder
+echo "Installing production dependencies..."
+cp package.json dist/
+cp package-lock.json dist/ 2>/dev/null || true
+cd dist
+npm install --production --no-package-lock
+cd ..
+
+# Copy built files
 cp -r build/* dist/
+
+# Create zip file
 cd dist
 zip -r ../ideas-service.zip . > /dev/null
 cd ..

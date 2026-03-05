@@ -41,24 +41,28 @@ npm install
 npm run build
 
 echo "Creating deployment package for User Service..."
-rm -rf dist
-mkdir -p dist
+rm -rf deployment-package user-service.zip
+mkdir -p deployment-package
 
-# Install production dependencies in dist folder
+# Copy built files (TypeScript outputs to dist folder)
+echo "Copying built files..."
+cp -r dist/* deployment-package/
+
+# Install production dependencies in deployment-package folder
 echo "Installing production dependencies..."
-cp package.json dist/
-cp package-lock.json dist/ 2>/dev/null || true
-cd dist
+cp package.json deployment-package/
+cp package-lock.json deployment-package/ 2>/dev/null || true
+cd deployment-package
 npm install --production --no-package-lock
 cd ..
 
-# Copy built files
-cp -r build/* dist/
-
 # Create zip file
-cd dist
+cd deployment-package
 zip -r ../user-service.zip . > /dev/null
 cd ..
+
+# Clean up
+rm -rf deployment-package
 
 echo "Deploying User Service to Lambda..."
 aws lambda update-function-code \
@@ -77,24 +81,28 @@ npm install
 npm run build
 
 echo "Creating deployment package for Ideas Service..."
-rm -rf dist
-mkdir -p dist
+rm -rf deployment-package ideas-service.zip
+mkdir -p deployment-package
 
-# Install production dependencies in dist folder
+# Copy built files (TypeScript outputs to dist folder)
+echo "Copying built files..."
+cp -r dist/* deployment-package/
+
+# Install production dependencies in deployment-package folder
 echo "Installing production dependencies..."
-cp package.json dist/
-cp package-lock.json dist/ 2>/dev/null || true
-cd dist
+cp package.json deployment-package/
+cp package-lock.json deployment-package/ 2>/dev/null || true
+cd deployment-package
 npm install --production --no-package-lock
 cd ..
 
-# Copy built files
-cp -r build/* dist/
-
 # Create zip file
-cd dist
+cd deployment-package
 zip -r ../ideas-service.zip . > /dev/null
 cd ..
+
+# Clean up
+rm -rf deployment-package
 
 echo "Deploying Ideas Service to Lambda..."
 aws lambda update-function-code \

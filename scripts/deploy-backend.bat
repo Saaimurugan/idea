@@ -39,31 +39,34 @@ if %ERRORLEVEL% NEQ 0 (
 )
 
 echo Creating deployment package for User Service...
-if exist dist rmdir /s /q dist
+if exist deployment-package rmdir /s /q deployment-package
 if exist user-service.zip del user-service.zip
 
 REM Create temporary directory for packaging
-mkdir dist
+mkdir deployment-package
 
-REM Copy built files first
+REM Copy built files first (TypeScript outputs to dist folder)
 echo Copying built files...
-xcopy /s /q build\* dist\
+xcopy /s /q dist\* deployment-package\
 
 REM Copy package files for production install
 echo Installing production dependencies...
-copy package.json dist\package.json
-copy package-lock.json dist\package-lock.json 2>nul
+copy package.json deployment-package\package.json
+copy package-lock.json deployment-package\package-lock.json 2>nul
 
-REM Install production dependencies in dist
-pushd dist
+REM Install production dependencies in deployment-package
+pushd deployment-package
 call npm install --production --no-package-lock
 popd
 
 REM Create zip file
 echo Creating zip package...
-pushd dist
+pushd deployment-package
 powershell -command "Compress-Archive -Path * -DestinationPath ..\user-service.zip -Force"
 popd
+
+REM Clean up
+rmdir /s /q deployment-package
 
 echo Deploying User Service to Lambda...
 aws lambda update-function-code ^
@@ -99,31 +102,34 @@ if %ERRORLEVEL% NEQ 0 (
 )
 
 echo Creating deployment package for Ideas Service...
-if exist dist rmdir /s /q dist
+if exist deployment-package rmdir /s /q deployment-package
 if exist ideas-service.zip del ideas-service.zip
 
 REM Create temporary directory for packaging
-mkdir dist
+mkdir deployment-package
 
-REM Copy built files first
+REM Copy built files first (TypeScript outputs to dist folder)
 echo Copying built files...
-xcopy /s /q build\* dist\
+xcopy /s /q dist\* deployment-package\
 
 REM Copy package files for production install
 echo Installing production dependencies...
-copy package.json dist\package.json
-copy package-lock.json dist\package-lock.json 2>nul
+copy package.json deployment-package\package.json
+copy package-lock.json deployment-package\package-lock.json 2>nul
 
-REM Install production dependencies in dist
-pushd dist
+REM Install production dependencies in deployment-package
+pushd deployment-package
 call npm install --production --no-package-lock
 popd
 
 REM Create zip file
 echo Creating zip package...
-pushd dist
+pushd deployment-package
 powershell -command "Compress-Archive -Path * -DestinationPath ..\ideas-service.zip -Force"
 popd
+
+REM Clean up
+rmdir /s /q deployment-package
 
 echo Deploying Ideas Service to Lambda...
 aws lambda update-function-code ^

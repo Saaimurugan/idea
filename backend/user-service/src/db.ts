@@ -20,7 +20,7 @@ import { User } from './types';
 const client = new DynamoDBClient({});
 const docClient = DynamoDBDocumentClient.from(client);
 
-const USERS_TABLE = process.env.USERS_TABLE || 'Users';
+const USERS_TABLE = process.env.USERS_TABLE_NAME || 'Users';
 
 /**
  * Create a new user in DynamoDB

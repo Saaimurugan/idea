@@ -60,6 +60,11 @@ export const Navigation: React.FC = () => {
     <nav style={styles.nav}>
       <div style={styles.container}>
         <div style={styles.brand}>
+          <img 
+            src="/mps-logo.png" 
+            alt="MPS Logo" 
+            style={styles.logo}
+          />
           <h1 style={styles.brandText}>Ideas Management</h1>
           {role && <span style={styles.roleTag}>{role}</span>}
         </div>
@@ -103,6 +108,12 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     gap: '12px',
+  },
+  logo: {
+    height: '35px',
+    width: 'auto',
+    objectFit: 'contain' as const,
+    display: 'block',
   },
   brandText: {
     margin: 0,

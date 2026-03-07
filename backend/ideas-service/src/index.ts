@@ -40,6 +40,22 @@ const CORS_HEADERS = {
 };
 
 /**
+ * Extract ideaId from API Gateway event
+ * Handles both v1 and v2 event formats and different path parameter names
+ */
+function extractIdeaId(event: APIGatewayProxyEvent): string | undefined {
+  // Try pathParameters first (v1 format or explicit parameter name)
+  const ideaId = event.pathParameters?.ideaId || event.pathParameters?.proxy;
+  if (ideaId && !ideaId.includes('/')) return ideaId;
+  
+  // Extract from path directly (for v2 format or when pathParameters is not set correctly)
+  const path = event.path || (event as any).rawPath || '';
+  // Match /ideas/{ideaId} but not /ideas/{ideaId}/comments or /ideas/{ideaId}/assign etc.
+  const match = path.match(/\/ideas\/([a-f0-9-]+)(?:\/|$)/);
+  return match ? match[1] : undefined;
+}
+
+/**
  * Create error response
  */
 function errorResponse(statusCode: number, code: string, message: string, details?: any): APIGatewayProxyResult {
@@ -234,7 +250,7 @@ async function handleListIdeas(event: APIGatewayProxyEvent): Promise<APIGatewayP
  */
 async function handleGetIdea(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
   try {
-    const ideaId = event.pathParameters?.ideaId;
+    const ideaId = extractIdeaId(event);
     
     if (!ideaId) {
       return errorResponse(400, 'VALIDATION_ERROR', 'ideaId path parameter is required');
@@ -282,7 +298,7 @@ async function handleGetIdea(event: APIGatewayProxyEvent): Promise<APIGatewayPro
  */
 async function handleAssignIdea(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
   try {
-    const ideaId = event.pathParameters?.ideaId;
+    const ideaId = extractIdeaId(event);
     
     if (!ideaId) {
       return errorResponse(400, 'VALIDATION_ERROR', 'ideaId path parameter is required');
@@ -380,7 +396,7 @@ async function handleAssignIdea(event: APIGatewayProxyEvent): Promise<APIGateway
  */
 async function handleUpdateStatus(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
   try {
-    const ideaId = event.pathParameters?.ideaId;
+    const ideaId = extractIdeaId(event);
     
     if (!ideaId) {
       return errorResponse(400, 'VALIDATION_ERROR', 'ideaId path parameter is required');
@@ -486,7 +502,7 @@ async function handleUpdateStatus(event: APIGatewayProxyEvent): Promise<APIGatew
  */
 async function handleCreateComment(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
   try {
-    const ideaId = event.pathParameters?.ideaId;
+    const ideaId = extractIdeaId(event);
     
     if (!ideaId) {
       return errorResponse(400, 'VALIDATION_ERROR', 'ideaId path parameter is required');
@@ -591,7 +607,7 @@ async function handleCreateComment(event: APIGatewayProxyEvent): Promise<APIGate
  */
 async function handleGetComments(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
   try {
-    const ideaId = event.pathParameters?.ideaId;
+    const ideaId = extractIdeaId(event);
     
     if (!ideaId) {
       return errorResponse(400, 'VALIDATION_ERROR', 'ideaId path parameter is required');
@@ -639,46 +655,59 @@ export const handler = async (
 ): Promise<APIGatewayProxyResult> => {
   console.log('Event:', JSON.stringify(event, null, 2));
 
-  const { httpMethod, path } = event;
+  const { httpMethod } = event;
+  // API Gateway v2 uses requestContext.http.method, v1 uses httpMethod
+  const method = httpMethod || (event as any).requestContext?.http?.method;
+  // Handle both path and rawPath (API Gateway v2 format)
+  let path = event.path || (event as any).rawPath || '';
+  
+  // API Gateway v2 includes the stage in the path, v1 doesn't
+  // Remove stage prefix if it exists (e.g., /prod/ideas -> /ideas)
+  const pathSegments = path.split('/').filter((s: string) => s);
+  if (pathSegments.length > 0 && pathSegments[0] === 'prod') {
+    path = '/' + pathSegments.slice(1).join('/');
+  }
+  
+  console.log('Request:', { method, httpMethod, originalPath: event.path, processedPath: path });
   
   try {
     // Handle OPTIONS for CORS preflight
-    if (httpMethod === 'OPTIONS') {
+    if (method === 'OPTIONS') {
       return successResponse(200, {});
     }
     
-    // Route to appropriate handler
-    if (httpMethod === 'POST' && path === '/ideas') {
+    // Route to appropriate handler - check both original and clean paths
+    if (method === 'POST' && path === '/ideas') {
       return await handleCreateIdea(event);
     }
     
-    if (httpMethod === 'GET' && path === '/ideas') {
+    if (method === 'GET' && path === '/ideas') {
       return await handleListIdeas(event);
     }
     
-    if (httpMethod === 'GET' && path?.startsWith('/ideas/') && !path.includes('/comments')) {
+    if (method === 'GET' && path.startsWith('/ideas/') && !path.includes('/comments')) {
       return await handleGetIdea(event);
     }
     
-    if (httpMethod === 'PUT' && path?.match(/^\/ideas\/[^/]+\/assign$/)) {
+    if (method === 'PUT' && path.match(/^\/ideas\/[^/]+\/assign$/)) {
       return await handleAssignIdea(event);
     }
     
-    if (httpMethod === 'PUT' && path?.match(/^\/ideas\/[^/]+\/status$/)) {
+    if (method === 'PUT' && path.match(/^\/ideas\/[^/]+\/status$/)) {
       return await handleUpdateStatus(event);
     }
     
-    if (httpMethod === 'POST' && path?.match(/^\/ideas\/[^/]+\/comments$/)) {
+    if (method === 'POST' && path.match(/^\/ideas\/[^/]+\/comments$/)) {
       return await handleCreateComment(event);
     }
     
-    if (httpMethod === 'GET' && path?.match(/^\/ideas\/[^/]+\/comments$/)) {
+    if (method === 'GET' && path.match(/^\/ideas\/[^/]+\/comments$/)) {
       return await handleGetComments(event);
     }
     
     // Unknown endpoint
-    console.warn(`Unknown endpoint: ${httpMethod} ${path}`);
-    return errorResponse(404, 'NOT_FOUND', `Endpoint ${httpMethod} ${path} not found`);
+    console.warn(`Unknown endpoint: ${method} ${path}`);
+    return errorResponse(404, 'NOT_FOUND', `Endpoint ${method} ${path} not found`);
     
   } catch (error) {
     console.error('Unhandled error in Lambda handler:', error);

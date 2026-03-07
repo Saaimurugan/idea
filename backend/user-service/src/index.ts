@@ -537,48 +537,62 @@ export const handler = async (
 ): Promise<APIGatewayProxyResult> => {
   console.log('Event:', JSON.stringify(event, null, 2));
 
-  const { httpMethod, path } = event;
+  const { httpMethod } = event;
+  // API Gateway v2 uses requestContext.http.method, v1 uses httpMethod
+  const method = httpMethod || (event as any).requestContext?.http?.method;
+  // Handle both path and rawPath (API Gateway v2 format)
+  let path = event.path || (event as any).rawPath || '';
+  
+  // API Gateway v2 includes the stage in the path, v1 doesn't
+  // Remove stage prefix if it exists (e.g., /prod/auth/login -> /auth/login)
+  // But be careful not to remove the first segment if it's actually part of the route
+  const pathSegments = path.split('/').filter((s: string) => s);
+  if (pathSegments.length > 0 && pathSegments[0] === 'prod') {
+    path = '/' + pathSegments.slice(1).join('/');
+  }
+  
+  console.log('Request:', { method, httpMethod, originalPath: event.path, processedPath: path });
   
   try {
     // Handle OPTIONS for CORS
-    if (httpMethod === 'OPTIONS') {
+    if (method === 'OPTIONS') {
       return successResponse(200, {});
     }
     
     // Route to appropriate handler
-    if (httpMethod === 'POST' && path === '/auth/login') {
+    if (method === 'POST' && path === '/auth/login') {
       return await handleLogin(event);
     }
     
-    if (httpMethod === 'POST' && path === '/users') {
+    if (method === 'POST' && path === '/users') {
       return await handleCreateUser(event);
     }
     
-    if (httpMethod === 'GET' && path === '/users') {
+    if (method === 'GET' && path === '/users') {
       return await handleListUsers(event);
     }
     
-    if (httpMethod === 'GET' && path.startsWith('/users/')) {
+    if (method === 'GET' && path.startsWith('/users/')) {
       return await handleGetUser(event);
     }
     
-    if (httpMethod === 'PUT' && path.startsWith('/users/')) {
+    if (method === 'PUT' && path.startsWith('/users/')) {
       return await handleUpdateUser(event);
     }
     
-    if (httpMethod === 'DELETE' && path.startsWith('/users/')) {
+    if (method === 'DELETE' && path.startsWith('/users/')) {
       return await handleDeleteUser(event);
     }
     
     // Unknown route
-    console.warn('Unknown route requested:', { httpMethod, path });
+    console.warn('Unknown route requested:', { method, path });
     return errorResponse(404, 'NOT_FOUND', 'Endpoint not found');
     
   } catch (error: any) {
     console.error('Unhandled error in Lambda handler:', {
       error: error.message,
       stack: error.stack,
-      httpMethod,
+      method,
       path
     });
     return errorResponse(500, 'INTERNAL_ERROR', 'An internal error occurred');

@@ -109,8 +109,8 @@ function handleDynamoDBError(error: any, operation: string, context: string): ne
 const client = new DynamoDBClient({});
 const docClient = DynamoDBDocumentClient.from(client);
 
-const IDEAS_TABLE = process.env.IDEAS_TABLE || 'Ideas';
-const USERS_TABLE = process.env.USERS_TABLE || 'Users';
+const IDEAS_TABLE = process.env.IDEAS_TABLE_NAME || 'Ideas';
+const USERS_TABLE = process.env.USERS_TABLE_NAME || 'Users';
 
 /**
  * Create a new idea in DynamoDB
@@ -246,7 +246,10 @@ export async function getIdeasByStatus(status: string): Promise<Idea[]> {
       new QueryCommand({
         TableName: IDEAS_TABLE,
         IndexName: 'status-index',
-        KeyConditionExpression: 'status = :status',
+        KeyConditionExpression: '#status = :status',
+        ExpressionAttributeNames: {
+          '#status': 'status'
+        },
         ExpressionAttributeValues: {
           ':status': status
         }

@@ -267,6 +267,20 @@ Resources:
       RouteKey: 'ANY /ideas/{proxy+}'
       Target: !Sub 'integrations/${IdeasServiceIntegration}'
 
+  IdeasServiceRootRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref ApiGateway
+      RouteKey: 'ANY /ideas'
+      Target: !Sub 'integrations/${IdeasServiceIntegration}'
+
+  UserServiceRootRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref ApiGateway
+      RouteKey: 'ANY /users'
+      Target: !Sub 'integrations/${UserServiceIntegration}'
+
   ApiGatewayStage:
     Type: AWS::ApiGatewayV2::Stage
     Properties:

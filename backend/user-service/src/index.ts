@@ -335,6 +335,29 @@ async function handleListUsers(event: APIGatewayProxyEvent): Promise<APIGatewayP
 }
 
 /**
+ * Extract userId from path parameters
+ * Handles both API Gateway v1 and v2 formats
+ */
+function extractUserId(event: APIGatewayProxyEvent): string | null {
+  // Try direct path parameter first (API Gateway v1 format)
+  if (event.pathParameters?.userId) {
+    return event.pathParameters.userId;
+  }
+  
+  // Try proxy parameter (API Gateway v2 format with {proxy+})
+  if (event.pathParameters?.proxy) {
+    // proxy might be just the userId, or might include additional path segments
+    const segments = event.pathParameters.proxy.split('/');
+    return segments[0] || null;
+  }
+  
+  // Try extracting from path directly
+  const path = event.path || (event as any).rawPath || '';
+  const match = path.match(/\/users\/([^/]+)/);
+  return match ? match[1] : null;
+}
+
+/**
  * Handle GET /users/{userId} - Get single user by ID
  */
 async function handleGetUser(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
@@ -346,7 +369,7 @@ async function handleGetUser(event: APIGatewayProxyEvent): Promise<APIGatewayPro
     }
     
     // Extract userId from path
-    const userId = event.pathParameters?.userId;
+    const userId = extractUserId(event);
     if (!userId) {
       return errorResponse(400, 'INVALID_REQUEST', 'User ID is required');
     }
@@ -398,7 +421,7 @@ async function handleUpdateUser(event: APIGatewayProxyEvent): Promise<APIGateway
     }
     
     // Extract userId from path
-    const userId = event.pathParameters?.userId;
+    const userId = extractUserId(event);
     if (!userId) {
       return errorResponse(400, 'INVALID_REQUEST', 'User ID is required');
     }
@@ -487,7 +510,7 @@ async function handleDeleteUser(event: APIGatewayProxyEvent): Promise<APIGateway
     }
     
     // Extract userId from path
-    const userId = event.pathParameters?.userId;
+    const userId = extractUserId(event);
     if (!userId) {
       return errorResponse(400, 'INVALID_REQUEST', 'User ID is required');
     }

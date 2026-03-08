@@ -15,6 +15,7 @@ exports.validateCreateIdeaRequest = validateCreateIdeaRequest;
 exports.validateAssignIdeaRequest = validateAssignIdeaRequest;
 exports.validateUpdateStatusRequest = validateUpdateStatusRequest;
 exports.validateCreateCommentRequest = validateCreateCommentRequest;
+exports.validateUpdateIdeaRequest = validateUpdateIdeaRequest;
 /**
  * Valid idea status values
  */
@@ -152,6 +153,42 @@ function validateCreateCommentRequest(request) {
     }
     if (!isValidCommentText(request.text)) {
         throw new ValidationError('Comment text must be between 1 and 2000 characters');
+    }
+}
+/**
+ * Validate idea update request
+ */
+function validateUpdateIdeaRequest(request) {
+    if (!request || typeof request !== 'object') {
+        throw new ValidationError('Request body must be an object');
+    }
+    // At least one field must be provided
+    if (!request.title && !request.description) {
+        throw new ValidationError('At least one field (title or description) must be provided');
+    }
+    // Validate title if provided
+    if (request.title !== undefined) {
+        if (typeof request.title !== 'string') {
+            throw new ValidationError('Title must be a string');
+        }
+        if (request.title.trim().length === 0) {
+            throw new ValidationError('Title cannot be empty');
+        }
+        if (request.title.length > 200) {
+            throw new ValidationError('Title must not exceed 200 characters');
+        }
+    }
+    // Validate description if provided
+    if (request.description !== undefined) {
+        if (typeof request.description !== 'string') {
+            throw new ValidationError('Description must be a string');
+        }
+        if (request.description.trim().length === 0) {
+            throw new ValidationError('Description cannot be empty');
+        }
+        if (request.description.length > 2000) {
+            throw new ValidationError('Description must not exceed 2000 characters');
+        }
     }
 }
 //# sourceMappingURL=validation.js.map

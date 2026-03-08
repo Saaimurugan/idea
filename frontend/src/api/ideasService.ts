@@ -26,6 +26,19 @@ export const ideasService = {
     return response.data;
   },
 
+  updateIdea: async (
+    ideaId: string,
+    updates: { title?: string; description?: string }
+  ): Promise<{ success: boolean }> => {
+    const response = await apiClient.put(`/ideas/${ideaId}`, updates);
+    return response.data;
+  },
+
+  deleteIdea: async (ideaId: string): Promise<{ success: boolean }> => {
+    const response = await apiClient.delete(`/ideas/${ideaId}`);
+    return response.data;
+  },
+
   assignIdea: async (
     ideaId: string,
     assigneeId: string,

@@ -15,6 +15,7 @@ exports.getIdeasByAssignee = getIdeasByAssignee;
 exports.getIdeasByStatus = getIdeasByStatus;
 exports.updateIdea = updateIdea;
 exports.userExists = userExists;
+exports.deleteIdea = deleteIdea;
 const client_dynamodb_1 = require("@aws-sdk/client-dynamodb");
 const lib_dynamodb_1 = require("@aws-sdk/lib-dynamodb");
 /**
@@ -241,6 +242,29 @@ async function userExists(userId) {
     }
     catch (error) {
         handleDynamoDBError(error, 'GetItem', `userExists(${userId})`);
+    }
+}
+/**
+ * Delete idea by ID
+ * Ensures write completes successfully before returning
+ */
+async function deleteIdea(ideaId) {
+    try {
+        console.log(`Deleting idea: ${ideaId}`);
+        const result = await docClient.send(new lib_dynamodb_1.DeleteCommand({
+            TableName: IDEAS_TABLE,
+            Key: { ideaId },
+            ConditionExpression: 'attribute_exists(ideaId)',
+            ReturnValues: 'NONE'
+        }));
+        // Verify the write was acknowledged by DynamoDB
+        if (result.$metadata.httpStatusCode !== 200) {
+            throw new DatabaseError(`DynamoDB delete failed with status: ${result.$metadata.httpStatusCode}`, 'DELETE_FAILED');
+        }
+        console.log(`Successfully deleted idea: ${ideaId}`);
+    }
+    catch (error) {
+        handleDynamoDBError(error, 'DeleteItem', `deleteIdea(${ideaId})`);
     }
 }
 //# sourceMappingURL=db.js.map

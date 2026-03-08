@@ -45,4 +45,9 @@ export declare function updateIdea(ideaId: string, updates: Partial<Omit<Idea, '
  * Check if a user exists in the Users table
  */
 export declare function userExists(userId: string): Promise<boolean>;
+/**
+ * Delete idea by ID
+ * Ensures write completes successfully before returning
+ */
+export declare function deleteIdea(ideaId: string): Promise<void>;
 //# sourceMappingURL=db.d.ts.map

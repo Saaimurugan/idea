@@ -553,6 +553,147 @@ async function handleGetComments(event) {
     }
 }
 /**
+ * Handle PUT /ideas/{ideaId} - Update idea
+ *
+ * Authorization:
+ * - Employee: Can update their own ideas (only if status is "Pending Review")
+ * - Admin: Can update any idea
+ */
+async function handleUpdateIdea(event) {
+    try {
+        const ideaId = extractIdeaId(event);
+        if (!ideaId) {
+            return errorResponse(400, 'VALIDATION_ERROR', 'ideaId path parameter is required');
+        }
+        console.log(`Updating idea: ${ideaId}`);
+        // Validate JWT token and extract user info
+        const authContext = (0, auth_1.validateToken)(event);
+        if (!authContext) {
+            return errorResponse(401, 'UNAUTHORIZED', 'Valid authentication token is required');
+        }
+        // Parse and validate request body
+        const body = JSON.parse(event.body || '{}');
+        (0, validation_1.validateUpdateIdeaRequest)(body);
+        // Check if idea exists
+        const idea = await (0, db_1.getIdeaById)(ideaId);
+        if (!idea) {
+            return errorResponse(404, 'NOT_FOUND', `Idea with ID ${ideaId} not found`);
+        }
+        // Authorization check
+        if (authContext.role === 'Employee') {
+            // Employees can only update their own ideas
+            if (idea.submitterId !== authContext.userId) {
+                return errorResponse(403, 'FORBIDDEN', 'You can only update your own ideas');
+            }
+            // Employees can only update ideas in "Pending Review" status
+            if (idea.status !== 'Pending Review') {
+                return errorResponse(403, 'FORBIDDEN', 'You can only update ideas that are in "Pending Review" status');
+            }
+        }
+        else if (authContext.role !== 'Admin') {
+            // Only Employees and Admins can update ideas
+            return errorResponse(403, 'FORBIDDEN', 'Insufficient permissions to update ideas');
+        }
+        // Prepare updates
+        const updates = {
+            updatedAt: new Date().toISOString()
+        };
+        if (body.title !== undefined) {
+            updates.title = body.title.trim();
+        }
+        if (body.description !== undefined) {
+            updates.description = body.description.trim();
+        }
+        // Update idea in DynamoDB
+        await (0, db_1.updateIdea)(ideaId, updates);
+        console.log(`Successfully updated idea: ${ideaId}`);
+        return successResponse(200, { success: true });
+    }
+    catch (error) {
+        console.error('Error updating idea:', error);
+        if (error instanceof validation_1.ValidationError) {
+            return errorResponse(400, 'VALIDATION_ERROR', error.message, error.details);
+        }
+        if (error instanceof SyntaxError) {
+            return errorResponse(400, 'INVALID_JSON', 'Request body must be valid JSON');
+        }
+        if (error instanceof db_1.DatabaseError) {
+            if (error.code === 'CONDITIONAL_CHECK_FAILED') {
+                return errorResponse(404, 'NOT_FOUND', `Idea with ID ${event.pathParameters?.ideaId} not found`);
+            }
+            if (error.code === 'TABLE_NOT_FOUND') {
+                return errorResponse(500, 'DATABASE_ERROR', 'Database configuration error');
+            }
+            if (error.code === 'THROUGHPUT_EXCEEDED' || error.code === 'REQUEST_LIMIT_EXCEEDED') {
+                return errorResponse(503, 'SERVICE_UNAVAILABLE', error.message);
+            }
+            return errorResponse(500, 'DATABASE_ERROR', error.message);
+        }
+        return errorResponse(500, 'INTERNAL_ERROR', 'An unexpected error occurred');
+    }
+}
+/**
+ * Handle DELETE /ideas/{ideaId} - Delete idea
+ *
+ * Authorization:
+ * - Employee: Can delete their own ideas (only if status is "Pending Review")
+ * - Admin: Can delete any idea
+ */
+async function handleDeleteIdea(event) {
+    try {
+        const ideaId = extractIdeaId(event);
+        if (!ideaId) {
+            return errorResponse(400, 'VALIDATION_ERROR', 'ideaId path parameter is required');
+        }
+        console.log(`Deleting idea: ${ideaId}`);
+        // Validate JWT token and extract user info
+        const authContext = (0, auth_1.validateToken)(event);
+        if (!authContext) {
+            return errorResponse(401, 'UNAUTHORIZED', 'Valid authentication token is required');
+        }
+        // Check if idea exists
+        const idea = await (0, db_1.getIdeaById)(ideaId);
+        if (!idea) {
+            return errorResponse(404, 'NOT_FOUND', `Idea with ID ${ideaId} not found`);
+        }
+        // Authorization check
+        if (authContext.role === 'Employee') {
+            // Employees can only delete their own ideas
+            if (idea.submitterId !== authContext.userId) {
+                return errorResponse(403, 'FORBIDDEN', 'You can only delete your own ideas');
+            }
+            // Employees can only delete ideas in "Pending Review" status
+            if (idea.status !== 'Pending Review') {
+                return errorResponse(403, 'FORBIDDEN', 'You can only delete ideas that are in "Pending Review" status');
+            }
+        }
+        else if (authContext.role !== 'Admin') {
+            // Only Employees and Admins can delete ideas
+            return errorResponse(403, 'FORBIDDEN', 'Insufficient permissions to delete ideas');
+        }
+        // Delete idea from DynamoDB
+        await (0, db_1.deleteIdea)(ideaId);
+        console.log(`Successfully deleted idea: ${ideaId}`);
+        return successResponse(200, { success: true });
+    }
+    catch (error) {
+        console.error('Error deleting idea:', error);
+        if (error instanceof db_1.DatabaseError) {
+            if (error.code === 'CONDITIONAL_CHECK_FAILED') {
+                return errorResponse(404, 'NOT_FOUND', `Idea with ID ${event.pathParameters?.ideaId} not found`);
+            }
+            if (error.code === 'TABLE_NOT_FOUND') {
+                return errorResponse(500, 'DATABASE_ERROR', 'Database configuration error');
+            }
+            if (error.code === 'THROUGHPUT_EXCEEDED' || error.code === 'REQUEST_LIMIT_EXCEEDED') {
+                return errorResponse(503, 'SERVICE_UNAVAILABLE', error.message);
+            }
+            return errorResponse(500, 'DATABASE_ERROR', error.message);
+        }
+        return errorResponse(500, 'INTERNAL_ERROR', 'An unexpected error occurred');
+    }
+}
+/**
  * Lambda handler function
  */
 const handler = async (event) => {
@@ -583,6 +724,12 @@ const handler = async (event) => {
         }
         if (method === 'GET' && path.startsWith('/ideas/') && !path.includes('/comments')) {
             return await handleGetIdea(event);
+        }
+        if (method === 'PUT' && path.match(/^\/ideas\/[^/]+$/) && !path.includes('/assign') && !path.includes('/status')) {
+            return await handleUpdateIdea(event);
+        }
+        if (method === 'DELETE' && path.match(/^\/ideas\/[^/]+$/)) {
+            return await handleDeleteIdea(event);
         }
         if (method === 'PUT' && path.match(/^\/ideas\/[^/]+\/assign$/)) {
             return await handleAssignIdea(event);

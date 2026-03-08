@@ -11,6 +11,7 @@ import {
   PutCommand,
   GetCommand,
   UpdateCommand,
+  DeleteCommand,
   ScanCommand,
   QueryCommand
 } from '@aws-sdk/lib-dynamodb';
@@ -327,5 +328,36 @@ export async function userExists(userId: string): Promise<boolean> {
     return exists;
   } catch (error) {
     handleDynamoDBError(error, 'GetItem', `userExists(${userId})`);
+  }
+}
+
+/**
+ * Delete idea by ID
+ * Ensures write completes successfully before returning
+ */
+export async function deleteIdea(ideaId: string): Promise<void> {
+  try {
+    console.log(`Deleting idea: ${ideaId}`);
+    
+    const result = await docClient.send(
+      new DeleteCommand({
+        TableName: IDEAS_TABLE,
+        Key: { ideaId },
+        ConditionExpression: 'attribute_exists(ideaId)',
+        ReturnValues: 'NONE'
+      })
+    );
+    
+    // Verify the write was acknowledged by DynamoDB
+    if (result.$metadata.httpStatusCode !== 200) {
+      throw new DatabaseError(
+        `DynamoDB delete failed with status: ${result.$metadata.httpStatusCode}`,
+        'DELETE_FAILED'
+      );
+    }
+    
+    console.log(`Successfully deleted idea: ${ideaId}`);
+  } catch (error) {
+    handleDynamoDBError(error, 'DeleteItem', `deleteIdea(${ideaId})`);
   }
 }

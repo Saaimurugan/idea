@@ -44,4 +44,8 @@ export declare function validateUpdateStatusRequest(request: any): asserts reque
  * Validate comment creation request
  */
 export declare function validateCreateCommentRequest(request: any): asserts request is CreateCommentRequest;
+/**
+ * Validate idea update request
+ */
+export declare function validateUpdateIdeaRequest(request: any): void;
 //# sourceMappingURL=validation.d.ts.map

@@ -13,6 +13,7 @@ import { ReviewerDashboard } from '../pages/ReviewerDashboard';
 import { ImplementerDashboard } from '../pages/ImplementerDashboard';
 import { AdminDashboard } from '../pages/AdminDashboard';
 import { IdeaDetailPage } from '../pages/IdeaDetailPage';
+import { IdeaEditForm } from '../components/IdeaEditForm';
 
 const UnauthorizedPage = () => (
   <Layout>
@@ -56,6 +57,18 @@ export const AppRoutes: React.FC = () => {
           <ProtectedRoute allowedRoles={['Employee', 'Reviewer', 'Implementer', 'Admin']}>
             <Layout>
               <IdeaDetailPage />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Idea edit route - accessible by Employee and Admin */}
+      <Route
+        path="/ideas/:ideaId/edit"
+        element={
+          <ProtectedRoute allowedRoles={['Employee', 'Admin']}>
+            <Layout>
+              <IdeaEditForm />
             </Layout>
           </ProtectedRoute>
         }

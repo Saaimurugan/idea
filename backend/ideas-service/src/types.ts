@@ -16,6 +16,11 @@ export interface Idea {
 }
 
 /**
+ * Valid user roles in the system
+ */
+export type UserRole = 'Employee' | 'Reviewer' | 'Implementer' | 'Admin';
+
+/**
  * Valid idea status values
  */
 export type IdeaStatus = 

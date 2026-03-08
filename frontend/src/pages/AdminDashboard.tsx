@@ -12,6 +12,7 @@ export const AdminDashboard: React.FC = () => {
   const [showUserForm, setShowUserForm] = useState(false);
   const [editingUser, setEditingUser] = useState<User | undefined>(undefined);
   const [activeTab, setActiveTab] = useState<'ideas' | 'users'>('ideas');
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const handleCreateUser = () => {
     setEditingUser(undefined);
@@ -26,8 +27,8 @@ export const AdminDashboard: React.FC = () => {
   const handleFormSuccess = () => {
     setShowUserForm(false);
     setEditingUser(undefined);
-    // Trigger refresh by switching tabs
-    setActiveTab('users');
+    // Trigger refresh by incrementing key
+    setRefreshKey(prev => prev + 1);
   };
 
   const handleFormCancel = () => {
@@ -81,6 +82,7 @@ export const AdminDashboard: React.FC = () => {
             />
           ) : (
             <UserManagement
+              key={refreshKey}
               onCreateUser={handleCreateUser}
               onEditUser={handleEditUser}
             />

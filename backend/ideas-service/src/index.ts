@@ -28,6 +28,7 @@ import {
 } from './db';
 import { validateCreateIdeaRequest, validateAssignIdeaRequest, validateUpdateStatusRequest, validateCreateCommentRequest, ValidationError } from './validation';
 import { Idea, ErrorResponse, AssignIdeaRequest, UpdateStatusRequest, StatusChange, Comment, CreateCommentRequest } from './types';
+import { validateToken, AuthContext } from './auth';
 
 /**
  * Common response headers
@@ -312,11 +313,16 @@ async function handleAssignIdea(event: APIGatewayProxyEvent): Promise<APIGateway
     
     const { assigneeId, reviewerId } = body as AssignIdeaRequest;
     
-    // Check authorization - extract role from headers or token
-    // For now, we'll assume the role is passed in headers
-    const role = event.headers?.['x-user-role'] || event.headers?.['X-User-Role'];
+    // Validate JWT token and extract user role
+    const authContext = validateToken(event);
     
-    if (!role || (role !== 'Reviewer' && role !== 'Admin')) {
+    if (!authContext) {
+      return errorResponse(401, 'UNAUTHORIZED', 'Valid authentication token is required');
+    }
+    
+    const role = authContext.role;
+    
+    if (role !== 'Reviewer' && role !== 'Admin') {
       return errorResponse(403, 'FORBIDDEN', 'Only Reviewers and Admins can assign ideas');
     }
     
@@ -410,22 +416,32 @@ async function handleUpdateStatus(event: APIGatewayProxyEvent): Promise<APIGatew
     
     const { status, userId, role, reason } = body as UpdateStatusRequest;
     
+    // Validate JWT token and extract user role from token
+    const authContext = validateToken(event);
+    
+    if (!authContext) {
+      return errorResponse(401, 'UNAUTHORIZED', 'Valid authentication token is required');
+    }
+    
+    // Use role from JWT token, not from request body
+    const tokenRole = authContext.role;
+    
     // Check if idea exists
     const idea = await getIdeaById(ideaId);
     if (!idea) {
       return errorResponse(404, 'NOT_FOUND', `Idea with ID ${ideaId} not found`);
     }
     
-    // Check authorization based on role
-    if (role === 'Implementer') {
+    // Check authorization based on role from token
+    if (tokenRole === 'Implementer') {
       // Implementers can only update ideas assigned to them
       if (idea.assigneeId !== userId) {
         return errorResponse(403, 'FORBIDDEN', 'Implementers can only update ideas assigned to them');
       }
-    } else if (role === 'Reviewer') {
+    } else if (tokenRole === 'Reviewer') {
       // Reviewers can update status (typically to Approved or Rejected)
       // No additional checks needed
-    } else if (role === 'Admin') {
+    } else if (tokenRole === 'Admin') {
       // Admins can update any idea
       // No additional checks needed
     } else {
@@ -516,12 +532,14 @@ async function handleCreateComment(event: APIGatewayProxyEvent): Promise<APIGate
     
     const { userId, text } = body as CreateCommentRequest;
     
-    // Check authorization - extract role from headers
-    const role = event.headers?.['x-user-role'] || event.headers?.['X-User-Role'];
+    // Validate JWT token and extract user role
+    const authContext = validateToken(event);
     
-    if (!role) {
-      return errorResponse(403, 'FORBIDDEN', 'User role is required');
+    if (!authContext) {
+      return errorResponse(401, 'UNAUTHORIZED', 'Valid authentication token is required');
     }
+    
+    const role = authContext.role;
     
     // Validate referential integrity - user must exist
     const authorExists = await userExists(userId);

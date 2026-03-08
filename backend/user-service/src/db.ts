@@ -108,7 +108,10 @@ export async function getUsersByRole(role: string): Promise<User[]> {
     new QueryCommand({
       TableName: USERS_TABLE,
       IndexName: 'role-index',
-      KeyConditionExpression: 'role = :role',
+      KeyConditionExpression: '#role = :role',
+      ExpressionAttributeNames: {
+        '#role': 'role'
+      },
       ExpressionAttributeValues: {
         ':role': role
       }

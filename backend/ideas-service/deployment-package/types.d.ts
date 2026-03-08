@@ -15,6 +15,10 @@ export interface Idea {
     updatedAt: string;
 }
 /**
+ * Valid user roles in the system
+ */
+export type UserRole = 'Employee' | 'Reviewer' | 'Implementer' | 'Admin';
+/**
  * Valid idea status values
  */
 export type IdeaStatus = 'Pending Review' | 'In Review' | 'Assigned' | 'In Progress' | 'Completed' | 'Rejected';

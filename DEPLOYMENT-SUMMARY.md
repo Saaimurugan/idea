@@ -1,247 +1,199 @@
-# Deployment Summary
+# Employee Ideas Management System - Deployment Summary
 
-## ✅ What You Have
+## ✅ Successfully Deployed Components
 
-Complete deployment scripts and infrastructure for the Employee Ideas Management System, ready to deploy to AWS us-east-2 region.
+### Infrastructure (AWS)
+- ✅ DynamoDB Tables: `prod-Users` and `prod-Ideas`
+- ✅ Lambda Functions: `prod-UserService` and `prod-IdeasService`
+- ✅ API Gateway with CORS enabled
+- ✅ S3 Bucket for frontend hosting
+- ✅ IAM Roles with proper permissions
 
-## 📁 Files Created
+### Backend Services
+- ✅ User Service Lambda (Authentication & User Management)
+  - Login working
+  - User creation working
+  - JWT token generation working
+  - Environment variables fixed (`USERS_TABLE_NAME`)
+  - API Gateway v2 event handling fixed
 
-### Deployment Scripts (`scripts/`)
-- ✅ `setup-aws-profile.sh` - Configure AWS credentials securely
-- ✅ `setup-aws-profile.bat` - Windows version
-- ✅ `deploy-all.sh` - Deploy everything in one command
-- ✅ `deploy-infrastructure.sh` - Deploy DynamoDB, Lambda, API Gateway, S3
-- ✅ `deploy-backend.sh` - Deploy Lambda functions only
-- ✅ `deploy-frontend.sh` - Deploy React app to S3
-- ✅ `create-admin-user.sh` - Create first admin user
-- ✅ `get-deployment-info.sh` - Get URLs and resource names
-- ✅ `cleanup.sh` - Delete all AWS resources
+- ✅ Ideas Service Lambda (Ideas & Comments Management)
+  - Idea creation working
+  - Ideas listing working
+  - Environment variables fixed (`IDEAS_TABLE_NAME`, `USERS_TABLE_NAME`)
+  - Reserved keyword issue fixed (`status` → `#status`)
+  - API Gateway v2 event handling fixed
+  - Path parameter extraction helper function added
 
-### Documentation
-- ✅ `QUICKSTART.md` - 5-minute deployment guide
-- ✅ `DEPLOYMENT.md` - Comprehensive deployment documentation
-- ✅ `README.md` - Project overview and quick start
-- ✅ `DEPLOYMENT-SUMMARY.md` - This file
+### Frontend (React)
+- ✅ Deployed to S3
+- ✅ Login page working
+- ✅ Role-based dashboards (Admin, Reviewer, Implementer, Employee)
+- ✅ Navigation with MPS logo
+- ✅ Idea submission working
+- ✅ Auto-refresh after idea submission
 
-### Infrastructure
-- ✅ `infrastructure/cloudformation.yaml` - Complete CloudFormation template with:
-  - DynamoDB tables (Users, Ideas) with GSIs
-  - Lambda functions (User Service, Ideas Service)
-  - API Gateway with CORS enabled (`*`)
-  - S3 bucket for frontend hosting
-  - IAM roles with least privilege
+### API Gateway Routes
+- ✅ `POST /auth/login` → User Service
+- ✅ `ANY /users` → User Service
+- ✅ `ANY /users/{proxy+}` → User Service
+- ✅ `ANY /ideas` → Ideas Service
+- ✅ `ANY /ideas/{proxy+}` → Ideas Service
 
-## 🚀 How to Deploy
+## 🔧 Recent Fixes Applied
 
-### Option 1: Quick Deploy (Recommended)
+1. **Environment Variable Names**: Changed from `USERS_TABLE`/`IDEAS_TABLE` to `USERS_TABLE_NAME`/`IDEAS_TABLE_NAME`
+2. **API Gateway v2 Event Handling**: Added support for `requestContext.http.method` and `rawPath`
+3. **Path Processing**: Added logic to strip stage name (`/prod`) from paths
+4. **Reserved Keyword**: Fixed DynamoDB query using `status` with expression attribute names
+5. **Missing Routes**: Added routes for `/ideas` and `/users` without path parameters
+6. **Path Parameter Extraction**: Created helper function to extract `ideaId` from various event formats
+7. **Frontend Refresh**: Added auto-refresh for ideas list after submission
+8. **Logo Integration**: Added MPS logo to navigation bar
 
+## ⚠️ Current Issue
+
+**Idea Detail Page Error**: "An internal error occurred"
+- The idea detail page is loading but encountering an error
+- Likely related to path parameter extraction or data retrieval
+- Need to check Lambda logs to identify the specific error
+
+## 🔍 Troubleshooting Steps
+
+### 1. Check Lambda Logs
 ```bash
-# 1. Configure AWS credentials
-./scripts/setup-aws-profile.sh
-
-# 2. Deploy everything
-./scripts/deploy-all.sh
-
-# 3. Create admin user
-./scripts/create-admin-user.sh
+scripts\check-lambda-logs.bat
 ```
 
-### Option 2: Step-by-Step Deploy
-
+### 2. Verify Latest Deployment
 ```bash
-# 1. Configure AWS credentials
-./scripts/setup-aws-profile.sh
-
-# 2. Deploy infrastructure
-./scripts/deploy-infrastructure.sh
-
-# 3. Deploy backend
-./scripts/deploy-backend.sh
-
-# 4. Deploy frontend
-./scripts/deploy-frontend.sh
-
-# 5. Create admin user
-./scripts/create-admin-user.sh
+aws lambda get-function --function-name prod-IdeasService --profile employee-ideas --region us-east-2 --query "Configuration.[LastModified,CodeSize]"
 ```
 
-## 🔐 Security Features
+### 3. Test API Directly
+```bash
+# Get your API URL
+scripts\get-deployment-info.bat
 
-✅ **Credentials Management**
-- AWS credentials stored securely in `~/.aws/credentials`
-- Never committed to git
-- Profile-based authentication
+# Test idea retrieval (replace IDEA_ID and TOKEN)
+curl -H "Authorization: Bearer YOUR_TOKEN" https://5ctqosryp2.execute-api.us-east-2.amazonaws.com/prod/ideas/IDEA_ID
+```
 
-✅ **AWS Security**
-- IAM roles for Lambda functions (no hardcoded credentials)
-- Least privilege IAM policies
-- DynamoDB encryption at rest (default)
-- CloudWatch logging enabled
+### 4. Redeploy Backend
+```bash
+scripts\deploy-backend.bat
+```
 
-✅ **Application Security**
-- Password hashing
-- Role-based access control
-- Input validation on all endpoints
-- CORS configured for API Gateway
+## 📝 System Features Working
 
-## 📊 What Gets Deployed
+1. ✅ User authentication and login
+2. ✅ Admin user creation
+3. ✅ User management (create, list users)
+4. ✅ Idea submission
+5. ✅ Ideas listing (role-based)
+6. ⚠️ Idea detail view (has error)
+7. ❓ Idea assignment (not tested yet)
+8. ❓ Status updates (not tested yet)
+9. ❓ Comments (not tested yet)
 
-### Region: us-east-2 (Ohio)
+## 🎯 Next Steps
 
-**DynamoDB Tables**
-- `production-Users` - User accounts with username and role GSIs
-- `production-Ideas` - Ideas with submitter, assignee, and status GSIs
+1. **Fix Idea Detail Page Error**
+   - Check Lambda logs for specific error
+   - Verify path parameter extraction is working
+   - Ensure idea exists in database
 
-**Lambda Functions**
-- `production-UserService` - Authentication and user management
-- `production-IdeasService` - Idea CRUD, assignments, comments
+2. **Test Remaining Features**
+   - Idea assignment (Reviewer → Implementer)
+   - Status updates (all roles)
+   - Comments functionality
+   - User editing and deletion
 
-**API Gateway**
-- HTTP API with CORS enabled (`Access-Control-Allow-Origin: *`)
-- Routes: `/auth/*`, `/users/*`, `/ideas/*`
+3. **Performance Optimization**
+   - Review Lambda memory settings
+   - Check DynamoDB read/write capacity
+   - Optimize frontend bundle size
 
-**S3 Bucket**
-- `production-employee-ideas-frontend-{AccountId}` - Static website hosting
+4. **Security Hardening**
+   - Review IAM permissions (principle of least privilege)
+   - Add rate limiting
+   - Implement request validation
+   - Add CloudWatch alarms
+
+## 📚 Useful Commands
+
+```bash
+# Check deployment info
+scripts\get-deployment-info.bat
+
+# View Lambda logs
+scripts\check-lambda-logs.bat
+
+# Redeploy backend
+scripts\deploy-backend.bat
+
+# Redeploy frontend
+scripts\deploy-frontend.bat
+
+# Redeploy infrastructure
+scripts\deploy-infrastructure.bat
+
+# Create admin user
+scripts\create-admin-user.bat
+
+# Full redeployment
+scripts\deploy-all.bat
+```
 
 ## 🌐 Access URLs
 
-After deployment, you'll get:
+- **Frontend**: http://prod-employee-ideas-frontend-850995535850.s3-website.us-east-2.amazonaws.com
+- **API Gateway**: https://5ctqosryp2.execute-api.us-east-2.amazonaws.com/prod
 
-1. **Website URL**: `http://{bucket-name}.s3-website.us-east-2.amazonaws.com`
-   - Your React frontend application
-   - Public access enabled
+## 👥 Test Users
 
-2. **API Gateway URL**: `https://{api-id}.execute-api.us-east-2.amazonaws.com/production`
-   - Your backend API
-   - CORS enabled for all origins
+- **Admin**: Created via `scripts\create-admin-user.bat`
+- **Other Roles**: Create via Admin Dashboard → User Management
 
-## 💰 Cost Estimate
+## 📊 Architecture
 
-### With AWS Free Tier
-- **DynamoDB**: Free (25 GB, 25 WCU, 25 RCU)
-- **Lambda**: Free (1M requests/month, 400,000 GB-seconds)
-- **API Gateway**: Free (1M requests/month for 12 months)
-- **S3**: Free (5 GB storage, 20,000 GET requests)
-
-### After Free Tier (Light Usage)
-- **DynamoDB**: $1-2/month
-- **Lambda**: $1-2/month
-- **API Gateway**: $1-2/month
-- **S3**: $0.50/month
-- **Total**: ~$5-10/month
-
-## 🛠️ Useful Commands
-
-```bash
-# Get deployment information
-./scripts/get-deployment-info.sh
-
-# View Lambda logs
-aws logs tail /aws/lambda/production-UserService --follow --profile employee-ideas --region us-east-2
-aws logs tail /aws/lambda/production-IdeasService --follow --profile employee-ideas --region us-east-2
-
-# Test API endpoint
-curl https://{api-id}.execute-api.us-east-2.amazonaws.com/production/health
-
-# Delete everything
-./scripts/cleanup.sh
+```
+Browser
+  ↓
+S3 (Frontend - React SPA)
+  ↓
+API Gateway (CORS enabled, stage: prod)
+  ↓
+Lambda Functions
+  ├── User Service (auth, users)
+  └── Ideas Service (ideas, comments)
+  ↓
+DynamoDB Tables
+  ├── prod-Users
+  └── prod-Ideas
 ```
 
-## 📝 Next Steps After Deployment
+## 🔐 Security Notes
 
-1. **Access the application** using the Website URL
-2. **Log in** with your admin credentials
-3. **Create users** via Admin → User Management
-4. **Test the workflow**:
-   - Log in as Employee → Submit an idea
-   - Log in as Reviewer → Review and assign the idea
-   - Log in as Implementer → Update status and add comments
-   - Log in as Admin → View all ideas and manage users
+- JWT tokens for authentication
+- Bcrypt password hashing (10 rounds)
+- Role-based access control
+- CORS enabled for frontend domain
+- IAM roles with scoped permissions
 
-## 🔧 Troubleshooting
+## 💡 Known Limitations
 
-### "Profile not found" error
-```bash
-./scripts/setup-aws-profile.sh
-```
+1. No email verification
+2. No password reset functionality
+3. No file attachments for ideas
+4. No real-time notifications
+5. No audit logging
+6. No data backup/restore procedures
 
-### Can't access website
-- Check S3 bucket policy allows public access
-- Verify API Gateway URL in frontend build
+## 📞 Support
 
-### Login not working
-- Check CloudWatch logs for Lambda errors
-- Verify admin user was created successfully
-- Check API Gateway CORS configuration
-
-### Lambda deployment fails
-```bash
-# Rebuild Lambda functions
-cd backend/user-service && npm run build
-cd backend/ideas-service && npm run build
-```
-
-## 📚 Documentation
-
-- **Quick Start**: [QUICKSTART.md](QUICKSTART.md)
-- **Full Deployment Guide**: [DEPLOYMENT.md](DEPLOYMENT.md)
-- **Project README**: [README.md](README.md)
-- **Frontend Guide**: [frontend/README.md](frontend/README.md)
-- **Infrastructure Details**: [infrastructure/README.md](infrastructure/README.md)
-
-## ⚠️ Important Notes
-
-1. **Never commit AWS credentials** to git
-2. **Rotate credentials** if accidentally exposed
-3. **Use HTTPS in production** (add CloudFront)
-4. **Enable DynamoDB backups** for production
-5. **Set up CloudWatch alarms** for monitoring
-6. **Implement rate limiting** on API Gateway
-7. **Use custom domain** for production
-
-## 🎯 Production Checklist
-
-Before going to production:
-
-- [ ] Enable CloudFront for HTTPS
-- [ ] Configure custom domain with Route 53
-- [ ] Enable DynamoDB point-in-time recovery
-- [ ] Set up CloudWatch alarms
-- [ ] Implement API rate limiting
-- [ ] Use AWS Secrets Manager for sensitive config
-- [ ] Enable AWS WAF for API protection
-- [ ] Implement proper password hashing (bcrypt)
-- [ ] Add API authentication (API keys or Cognito)
-- [ ] Set up CI/CD pipeline
-- [ ] Configure backup and disaster recovery
-- [ ] Perform security audit
-- [ ] Load testing
-- [ ] Documentation for operations team
-
-## ✅ System Status
-
-**Backend**
-- ✅ User Service: 108 tests passing
-- ✅ Ideas Service: 115 tests passing
-- ✅ Total: 223 tests passing
-
-**Frontend**
-- ✅ React app builds successfully
-- ✅ TypeScript compilation: No errors
-- ✅ All components implemented
-
-**Infrastructure**
-- ✅ CloudFormation template validated
-- ✅ All resources defined
-- ✅ CORS configured
-- ✅ IAM roles configured
-
-## 🎉 You're Ready to Deploy!
-
-Everything is set up and ready. Just run:
-
-```bash
-./scripts/deploy-all.sh
-```
-
-And your Employee Ideas Management System will be live on AWS in ~3 minutes!
+For issues or questions:
+1. Check Lambda logs: `scripts\check-lambda-logs.bat`
+2. Review this deployment summary
+3. Check CloudWatch metrics in AWS Console
+4. Review application logs in CloudWatch Logs

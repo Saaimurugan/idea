@@ -18,6 +18,7 @@ exports.handler = void 0;
 const crypto_1 = require("crypto");
 const db_1 = require("./db");
 const validation_1 = require("./validation");
+const auth_1 = require("./auth");
 /**
  * Common response headers
  */
@@ -256,10 +257,13 @@ async function handleAssignIdea(event) {
         const body = JSON.parse(event.body || '{}');
         (0, validation_1.validateAssignIdeaRequest)(body);
         const { assigneeId, reviewerId } = body;
-        // Check authorization - extract role from headers or token
-        // For now, we'll assume the role is passed in headers
-        const role = event.headers?.['x-user-role'] || event.headers?.['X-User-Role'];
-        if (!role || (role !== 'Reviewer' && role !== 'Admin')) {
+        // Validate JWT token and extract user role
+        const authContext = (0, auth_1.validateToken)(event);
+        if (!authContext) {
+            return errorResponse(401, 'UNAUTHORIZED', 'Valid authentication token is required');
+        }
+        const role = authContext.role;
+        if (role !== 'Reviewer' && role !== 'Admin') {
             return errorResponse(403, 'FORBIDDEN', 'Only Reviewers and Admins can assign ideas');
         }
         // Check if idea exists
@@ -338,23 +342,30 @@ async function handleUpdateStatus(event) {
         const body = JSON.parse(event.body || '{}');
         (0, validation_1.validateUpdateStatusRequest)(body);
         const { status, userId, role, reason } = body;
+        // Validate JWT token and extract user role from token
+        const authContext = (0, auth_1.validateToken)(event);
+        if (!authContext) {
+            return errorResponse(401, 'UNAUTHORIZED', 'Valid authentication token is required');
+        }
+        // Use role from JWT token, not from request body
+        const tokenRole = authContext.role;
         // Check if idea exists
         const idea = await (0, db_1.getIdeaById)(ideaId);
         if (!idea) {
             return errorResponse(404, 'NOT_FOUND', `Idea with ID ${ideaId} not found`);
         }
-        // Check authorization based on role
-        if (role === 'Implementer') {
+        // Check authorization based on role from token
+        if (tokenRole === 'Implementer') {
             // Implementers can only update ideas assigned to them
             if (idea.assigneeId !== userId) {
                 return errorResponse(403, 'FORBIDDEN', 'Implementers can only update ideas assigned to them');
             }
         }
-        else if (role === 'Reviewer') {
+        else if (tokenRole === 'Reviewer') {
             // Reviewers can update status (typically to Approved or Rejected)
             // No additional checks needed
         }
-        else if (role === 'Admin') {
+        else if (tokenRole === 'Admin') {
             // Admins can update any idea
             // No additional checks needed
         }
@@ -430,11 +441,12 @@ async function handleCreateComment(event) {
         const body = JSON.parse(event.body || '{}');
         (0, validation_1.validateCreateCommentRequest)(body);
         const { userId, text } = body;
-        // Check authorization - extract role from headers
-        const role = event.headers?.['x-user-role'] || event.headers?.['X-User-Role'];
-        if (!role) {
-            return errorResponse(403, 'FORBIDDEN', 'User role is required');
+        // Validate JWT token and extract user role
+        const authContext = (0, auth_1.validateToken)(event);
+        if (!authContext) {
+            return errorResponse(401, 'UNAUTHORIZED', 'Valid authentication token is required');
         }
+        const role = authContext.role;
         // Validate referential integrity - user must exist
         const authorExists = await (0, db_1.userExists)(userId);
         if (!authorExists) {

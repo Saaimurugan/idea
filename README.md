@@ -55,9 +55,22 @@ See [QUICKSTART.md](QUICKSTART.md) for detailed instructions.
 
 ## Documentation
 
+### Complete Documentation Suite
+- [Project Overview](PROJECT-OVERVIEW.md) - High-level project introduction and architecture
+- [User Guide](USER-GUIDE.md) - Complete user manual for all roles
+- [Developer Guide](DEVELOPER-GUIDE.md) - Development setup and instructions
+- [API Documentation](API-DOCUMENTATION.md) - Complete API reference
+- [Documentation Summary](DOCUMENTATION-SUMMARY.md) - Quick reference guide
+
+### Quick Start & Deployment
 - [Quick Start Guide](QUICKSTART.md) - Get started in 5 minutes
 - [Deployment Guide](DEPLOYMENT.md) - Comprehensive deployment documentation
+- [Deployment Summary](DEPLOYMENT-SUMMARY.md) - Current deployment status and fixes
+
+### Component Documentation
 - [Frontend README](frontend/README.md) - Frontend development guide
+- [User Service README](backend/user-service/README.md) - User service documentation
+- [Ideas Service README](backend/ideas-service/README.md) - Ideas service documentation
 - [Infrastructure README](infrastructure/README.md) - Infrastructure details
 
 ## Project Structure
@@ -234,10 +247,25 @@ Estimated cost after free tier: $5-10/month for light usage
 
 ## Support
 
-For issues or questions:
-1. Check [DEPLOYMENT.md](DEPLOYMENT.md) for troubleshooting
-2. Review CloudWatch logs for errors
-3. Verify AWS credentials and permissions
+### Documentation Resources
+For comprehensive guidance, refer to:
+- [User Guide](USER-GUIDE.md) - Complete user manual for all roles
+- [Developer Guide](DEVELOPER-GUIDE.md) - Development and troubleshooting
+- [API Documentation](API-DOCUMENTATION.md) - API reference and examples
+- [Deployment Summary](DEPLOYMENT-SUMMARY.md) - Current deployment status
+
+### For Issues or Questions:
+1. **Check Documentation**: Review relevant guides above
+2. **Deployment Issues**: Check [DEPLOYMENT.md](DEPLOYMENT.md) for troubleshooting
+3. **System Errors**: Review CloudWatch logs for errors
+4. **Authentication**: Verify AWS credentials and permissions
+5. **User Issues**: Refer to [User Guide](USER-GUIDE.md) for role-specific help
+
+### Quick Troubleshooting
+- **Login Issues**: Check [User Guide - Troubleshooting](USER-GUIDE.md#troubleshooting)
+- **API Errors**: Check [API Documentation - Error Responses](API-DOCUMENTATION.md#error-responses)
+- **Deployment Problems**: Check [Deployment Summary](DEPLOYMENT-SUMMARY.md) for known issues
+- **Development Issues**: Check [Developer Guide - Troubleshooting](DEVELOPER-GUIDE.md#troubleshooting)
 
 ## License
 
